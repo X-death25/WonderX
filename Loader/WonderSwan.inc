@@ -1,8 +1,8 @@
 ;--------------------------------------------
-;     Wonderswan Registers & Equates v0.2
+;     Wonderswan Registers & Equates v0.4
 ;              by Orion_ [2008]
 ;
-; http://onorisoft.free.fr/
+; http://onorisoft.info/
 ;
 ; with help of WStech24.txt by Judge and Dox
 ;--------------------------------------------
@@ -46,13 +46,12 @@ RH_VERTICAL		equ	(0x04 + 0x01)
 
 WS_RAM_BASE	equ	0x0000
 WS_TILE_BANK	equ	0x2000
-WS_STACK	equ	WS_TILE_BANK-2
 
 WSC_TILE_BANK1	equ	0x4000
 WSC_TILE_BANK2	equ	0x8000
 WSC_RAM_BASE2	equ	0xC000
 WSC_PALETTES	equ	0xFE00
-WSC_STACK	equ	WSC_PALETTES-2
+WSC_STACK		equ	WSC_PALETTES-2
 
 MAP_SIZE	equ	0x800
 SPR_TABLE_SIZE	equ	0x200
@@ -77,6 +76,9 @@ INTVEC_SERIAL_SEND	equ	0
 ; Useful Defines
 
 %define BG_CHR(tile,pal,bank,hflip,vflip)	(((vflip) << 15) | ((hflip) << 14) | ((bank) << 13) | ((pal) << 9) | (tile))
+
+%define	SPR_ATTR(tile,pal,win_clip,priority,hflip,vflip)	(((vflip) << 15) | ((hflip) << 14) | ((priority) << 13) | ((win_clip) << 12) | ((pal) << 9) | (tile))
+%define	SPR_POS(x,y)	((((x) & 0xFF) << 8) | ((y) & 0xFF))
 
 %macro	ROM_HEADER	7	; Label, Segment, DevID, WSType, RomSize, SRamSize, WSSpec
 	times	((64*1024)-16)-$+%1 db 0xFF
@@ -109,7 +111,16 @@ MAP_WIDTH	equ	256
 MAP_HEIGHT	equ	256
 MAP_TWIDTH	equ	(MAP_WIDTH / 8)
 MAP_THEIGHT	equ	(MAP_HEIGHT / 8)
-
+NO_HFLIP	equ	0
+HFLIP		equ	1
+NO_VFLIP	equ	0
+VFLIP		equ	1
+SPR_PRIO_BETWN	equ	0
+SPR_PRIO_TOP	equ	1
+SPR_NO_CLIP	equ	0
+SPR_WIN_CLIP	equ	1
+BANK1		equ	0
+BANK2		equ	1
 
 
 ;-----------------------------------
@@ -125,7 +136,7 @@ SPR_OFF		equ	0x00
 SPR_WIN_ON	equ	0x08
 SPR_WIN_OFF	equ	0x00
 FG_IN_OUT_WIN	equ	0x00
-FG_IN_WIN	equ	0x10
+FG_IN_WIN	equ	0x20
 FG_OUT_WIN	equ	0x30
 
 IO_BG_PAL	equ	0x01

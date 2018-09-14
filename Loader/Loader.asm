@@ -2,9 +2,9 @@
 ;
 ;  WonderX Loader
 ;  by X-death, 2018
-;  This piece of code can communicate with PC for Flashing Homebrew into the Flash Memory
+;  This piece of code can communicate with PC for Flashing Homebrew into the Cartridge NOR Flash Memory
 ;  https://github.com/X-death25/WonderX/tree/master/Loader
-;  Based on Orion_ WSExample http://onorisoft.free.fr/ and use some WSLinker Function writted by Zerosquare
+;  Based on Orion_ WSExample http://onorisoft.free.fr/ and also use some WSLinker Function by Zerosquare
 ;
 ;
 ;------------------------------------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ lock_cpu:
 	out IO_SRAM_BANK,al
 	
 ;-----------------------------------------------------------------------------
-; Initialize video
+; Common Video Init
 ;-----------------------------------------------------------------------------
 
 	in	al,IO_VIDEO_MODE
@@ -89,7 +89,10 @@ lock_cpu:
 ;-----------------------------------------------------------------------------
 ; Put Loader variables here
 ;-----------------------------------------------------------------------------
-
+	
+	FONT_MONO	equ	0x0
+	FONT_COLOR	equ	0xD
+	
 ;-----------------------------------------------------------------------------
 ; Register Vblank interrupt handler
 ;-----------------------------------------------------------------------------
@@ -119,13 +122,32 @@ lock_cpu:
 	; we have finished initializing, interrupts can now fire again
 	sti	
 	
-;-----------------------------------------------------------------------------
-; copy background and foreground tile data
-; into WS's tile and palette areas
-;-----------------------------------------------------------------------------
+	; Set Bank to MYSEGMENT before made any copy
+	mov	ax,MYSEGMENT
+	mov	ds,ax
+	xor	ax,ax
+	mov	es,ax
 	
 ;-----------------------------------------------------------------------------
-; Init Completed we can now start Display and main game loop
+; Copy WonderSwan Color Font to Tile Bank 1
+;-----------------------------------------------------------------------------
+		
+	xor	ah,ah
+	mov	al,FONT_COLOR
+	mov	dx,WSC_TILE_BANK1
+	call	CopyFont
+
+;-----------------------------------------------------------------------------
+; Try to display some text
+;-----------------------------------------------------------------------------	
+	
+	mov	ax,0x0430
+	mov	si,txt_hello ; The Text
+	mov	di,FG_MAP(fgmap) ; The TileMap
+	call   TextPrint
+
+;-----------------------------------------------------------------------------
+; Init Completed we can now turn ON Display and call main game loop
 ;-----------------------------------------------------------------------------
 	
 	; Enable Display 
@@ -143,6 +165,9 @@ lock_cpu:
 
 vblankInterruptHandler:
 
+
+	iret
+
 ;-----------------------------------------------------------------------------
 ;
 ; BEGIN main code
@@ -151,7 +176,7 @@ vblankInterruptHandler:
 
 main_loop:
 
-jmp main_loop
+jz main_loop
 
 ;-----------------------------------------------------------------------------
 ;
@@ -159,12 +184,19 @@ jmp main_loop
 ;
 ;-----------------------------------------------------------------------------
 
+;-----------------------------------------------------------------------------
+; Include Extra routines based on WSLinker
+;-----------------------------------------------------------------------------
+
+%include "wsutils.asm"		; Utility routines
 
 ;-----------------------------------------------------------------------------
 ; constants area
 ;-----------------------------------------------------------------------------
+
 	align 2
 	
+	txt_hello:	db	"Hello",0
 	author: db "X-death, 2018"	
 	ROM_HEADER	initialize, MYSEGMENT, 0x42, RH_WS_COLOR, RH_ROM_8MBITS, RH_NO_SRAM, RH_HORIZONTAL
 	
