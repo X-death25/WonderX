@@ -23,7 +23,7 @@
 
 // WonderX Special Command
 
-#define WAKEUP  0x10  // WakeUP for first STM32 Communication
+#define READY   0xF1  // WakeUP for first Wonderswan Communication
 #define READ_MD 0x11
 
 // WonderX Specific Variable
@@ -48,6 +48,7 @@ int main()
 
     int i=0;
     int choixMenu=0;
+    int Ready=0;
 
     // Main Program
 
@@ -100,8 +101,15 @@ int main()
 // Set BItbang Mode
 
     printf("Enabling bitbang mode");
-    ftdi_set_bitmode(ftdi, 0xFF, BITMODE_BITBANG);
+   ftdi_set_bitmode(ftdi, 0xFF, BITMODE_BITBANG);
     // ftdi_set_bitmode(ftdi, 0xFF, BITMODE_RESET); // switch off bitbang mode, back to regular serial/FIFO
+
+// Set Flow Control
+
+//ret = ftdi_setflowctrl(ftdi,SIO_RTS_CTS_HS);
+//ftdi_setdtr(ftdi,0);
+//ftdi_setrts(ftdi,0);
+//printf(" \n Ret value is %d",ret);
 
 
 // Clean Buffer
@@ -109,16 +117,18 @@ int main()
 
     for (i=0; i<128; i++)
     {
-        tx_buf[i]=0xAA;
+        tx_buf[i]=0x00;
         rx_buf[i]=0x00;
     }
 
-// Display Menu
 
+
+// Display Menu
 
     printf("\n\n --- MENU ---\n");
     printf(" 1) Write FT245 FIFO \n");
     printf(" 2) Read FT245 FIFO \n");
+	printf(" 3) Game Transfer \n");
 
     printf("\nYour choice: \n");
     scanf("%d", &choixMenu);
@@ -131,6 +141,7 @@ int main()
         printf("Writing to the FIFO... \n");
         wr_transfer = ftdi_write_data_submit(ftdi,tx_buf,sizeof(tx_buf));
 
+
 // Wait for transfers to complete
 
         if (wr_transfer > 0)
@@ -142,6 +153,23 @@ int main()
             printf("Write error \n");
             exit(-1);
         }
+
+        wr_transfer = ftdi_write_data_submit(ftdi,tx_buf,sizeof(tx_buf));
+
+
+// Wait for transfers to complete
+
+        if (wr_transfer > 0)
+        {
+            ftdi_transfer_data_done(wr_transfer);
+        }
+        if (wr_transfer < 0)
+        {
+            printf("Write error \n");
+            exit(-1);
+        }
+
+
         printf("FIFO Writted Sucessfully ! \n");
         ftdi_usb_close(ftdi);
         ftdi_free(ftdi);
@@ -151,7 +179,9 @@ int main()
 
         printf("\n");
         printf("Reading from the FIFO... \n");
+
         rd_transfer = ftdi_read_data_submit(ftdi,rx_buf,sizeof(rx_buf));
+
 
 // Wait for transfers to complete
 
@@ -182,7 +212,72 @@ int main()
         ftdi_usb_close(ftdi);
         ftdi_free(ftdi);
         break;
-    }
+    
+
+   case 3: // Game Transfer
+
+	    
+		//ret = ftdi_setdtr(ftdi,1);
+printf("Waiting Ready Signal from Wonderswan...\n");
+// First Communication Loop//
+while ( Ready != 1)
+{
+		
+	    rd_transfer = ftdi_read_data_submit(ftdi,rx_buf,sizeof(rx_buf));
+		// Wait for transfers to complete
+        if (rd_transfer > 0)
+        {
+            ftdi_transfer_data_done(rd_transfer);
+        }
+        if (rd_transfer < 0)
+        {
+            printf("read error \n");
+            exit(-1);
+        }
+		if ( rx_buf[0] == READY )
+		{
+		    Ready=1;
+		}
+}
+
+printf("Ready signal received !\n");
+printf("Send game to Wonderswan...\n");
+
+choixMenu=0;
+while (1)
+{
+    scanf("%d", &choixMenu);
+
+    switch(choixMenu)
+    {
+
+		 case 1: // File Info
+			while (1)
+		{
+
+		      // printf("Writing to the FIFO... \n");
+			   tx_buf[0]=0xF1;
+               wr_transfer = ftdi_write_data_submit(ftdi,tx_buf,sizeof(tx_buf));
+			    if (wr_transfer > 0)
+       			 {
+           		 ftdi_transfer_data_done(wr_transfer);
+        		}
+				//printf("Transfer Done \n");
+       }
+			   break;
+
+	}
+}
+
+
+
+
+	    
+	    break;
+
+}
+
+
 
 
 
